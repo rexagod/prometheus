@@ -10,13 +10,16 @@ local template = grafana.template;
 {
   grafanaDashboards+:: {
     'prometheus.json':
-      g.dashboard(
-        '%(prefix)sOverview' % $._config.grafanaPrometheus
-      )
-      .addMultiTemplate('cluster', 'prometheus_build_info{%(prometheusSelector)s}' % $._config, 'cluster')
-      .addMultiTemplate('job', 'prometheus_build_info{cluster=~"$cluster"}', 'job')
-      .addMultiTemplate('instance', 'prometheus_build_info{cluster=~"$cluster", job=~"$job"}', 'instance')
-      .addRow(
+      local dashboard = if $._config.prometheusMultiClusterDashboards then
+        g.dashboard('%(prefix)sOverview' % $._config.grafanaPrometheus)
+        .addMultiTemplate('cluster', 'prometheus_build_info{%(prometheusSelector)s}' % $._config, $._config.clusterLabel)
+        .addMultiTemplate('job', 'prometheus_build_info{cluster=~"$cluster"}', 'job')
+        .addMultiTemplate('instance', 'prometheus_build_info{cluster=~"$cluster", job=~"$job"}', 'instance')
+      else
+        g.dashboard('%(prefix)sOverview' % $._config.grafanaPrometheus)
+        .addMultiTemplate('job', 'prometheus_build_info{%(prometheusSelector)s}' % $._config, 'job')
+        .addMultiTemplate('instance', 'prometheus_build_info{job=~"$job"}', 'instance');
+      dashboard.addRow(
         g.row('Prometheus Stats')
         .addPanel(
           g.panel('Prometheus Stats') +
